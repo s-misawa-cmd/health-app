@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パーソナル健康プラン提案アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        .step-indicator { transition: all 0.3s ease; }
+        .step-indicator.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        .step-indicator.completed { background-color: #16a34a; color: white; border-color: #16a34a; }
+        .result-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .result-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .day-btn { transition: all 0.2s ease-in-out; }
+        .day-btn.active { background-color: #2563eb; color: white; transform: scale(1.05); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .meal-card, .exercise-card { transition: all 0.2s ease-in-out; cursor: pointer; }
+        .meal-card:hover { transform: scale(1.03); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .exercise-card:hover { transform: scale(1.03); box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3); }
+        #recipe-modal, #exercise-modal { transition: opacity 0.3s ease; }
+        .prose ul, .prose ol { padding-left: 1.5rem; }
+        .prose ul { list-style-type: disc; }
+        .prose ol { list-style-type: decimal; }
+        .prose p, .prose li { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">Myカルテ-i</h1>
+            <p class="text-gray-600 mt-2">健康診断の結果から、あなただけの健康プランをご提案します</p>
+        </header>
+
+        <!-- ステップインジケーター -->
+        <div id="step-indicators" class="flex items-center justify-center mb-8 space-x-4">
+            <div id="step-indicator-1" class="step-indicator active flex items-center justify-center w-10 h-10 rounded-full border-2 border-blue-500 bg-white text-blue-500 font-bold">1</div>
+            <div class="flex-1 h-1 bg-gray-200"></div>
+            <div id="step-indicator-2" class="step-indicator flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-300 bg-white text-gray-400 font-bold">2</div>
+            <div class="flex-1 h-1 bg-gray-200"></div>
+            <div id="step-indicator-3" class="step-indicator flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-300 bg-white text-gray-400 font-bold">3</div>
+        </div>
+
+        <main id="app-content">
+            <!-- ステップ1: 基本情報 -->
+            <div id="step-1" class="space-y-6 bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3">1. 基本情報</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label for="age" class="block text-sm font-medium text-gray-600 mb-1">年齢</label><input type="number" id="age" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="例: 45"></div>
+                    <div><label for="gender" class="block text-sm font-medium text-gray-600 mb-1">性別</label><select id="gender" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"><option value="male">男性</option><option value="female">女性</option></select></div>
+                    <div><label for="height" class="block text-sm font-medium text-gray-600 mb-1">身長 (cm)</label><input type="number" id="height" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="例: 170"></div>
+                    <div><label for="weight" class="block text-sm font-medium text-gray-600 mb-1">体重 (kg)</label><input type="number" id="weight" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="例: 75"></div>
+                </div>
+                <div class="text-right"><button onclick="nextStep(2)" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-600 transition-colors">次へ</button></div>
+            </div>
+
+            <!-- ステップ2: 健康状態・生活習慣 -->
+            <div id="step-2" class="hidden space-y-6 bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3">2. 健康状態・生活習慣</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">既往歴・現病歴</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="history" value="高血圧"><span>高血圧</span></label>
+                        <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="history" value="糖尿病"><span>糖尿病</span></label>
+                        <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="history" value="脂質異常症"><span>脂質異常症</span></label>
+                        <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="history" value="高尿酸血症"><span>高尿酸血症</span></label>
+                        <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="history" value="肝機能障害"><span>肝機能障害</span></label>
+                        <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"><input type="checkbox" name="history" value="貧血"><span>貧血</span></label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-2">アレルギー (当てはまるものにチェック)</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="egg"> 卵</label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="milk"> 乳製品</label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="wheat"> 小麦</label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="shrimp"> えび</label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="crab"> かに</label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="soba"> そば</label>
+                        <label class="flex items-center space-x-2"><input type="checkbox" name="allergy" value="peanut"> 落花生</label>
+                    </div>
+                    <label for="other_allergies" class="block text-sm font-medium text-gray-600 mb-1">その他のアレルギー (コンマ区切りで入力)</label>
+                    <input type="text" id="other_allergies" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="例: さば, りんご, キウイ">
+                </div>
+                 <div>
+                    <label for="exercise" class="block text-sm font-medium text-gray-600 mb-1">運動習慣</label>
+                    <select id="exercise" class="w-full p-3 border border-gray-300 rounded-lg bg-white">
+                        <option value="none">ほとんどしない</option><option value="light">週に1〜2日</option><option value="moderate">週に3〜4日</option><option value="heavy">ほぼ毎日</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="maxCost" class="block text-sm font-medium text-gray-600 mb-1">1食あたりの費用の上限 (円)</label>
+                    <input type="number" id="maxCost" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="例: 500 (指定なしの場合は空欄)">
+                </div>
+                <div class="flex justify-between"><button onclick="prevStep(1)" class="bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">戻る</button><button onclick="nextStep(3)" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-600">次へ</button></div>
+            </div>
+
+            <!-- ステップ3: 採血結果 -->
+            <div id="step-3" class="hidden space-y-6 bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3">3. 採血結果</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <div class="border-t pt-4"><h3 class="font-semibold mb-2 text-blue-700">脂質</h3><div class="space-y-3"><div><label for="ldl" class="text-sm">LDLコレステロール (mg/dL)</label><input type="number" id="ldl" class="w-full p-2 border-b-2" placeholder="悪玉"></div><div><label for="hdl" class="text-sm">HDLコレステロール (mg/dL)</label><input type="number" id="hdl" class="w-full p-2 border-b-2" placeholder="善玉"></div><div><label for="tg" class="text-sm">中性脂肪 (mg/dL)</label><input type="number" id="tg" class="w-full p-2 border-b-2" placeholder="トリグリセリド"></div></div></div>
+                    <div class="border-t pt-4"><h3 class="font-semibold mb-2 text-green-700">血糖</h3><div class="space-y-3"><div><label for="glucose" class="text-sm">空腹時血糖 (mg/dL)</label><input type="number" id="glucose" class="w-full p-2 border-b-2"></div><div><label for="hba1c" class="text-sm">HbA1c (%)</label><input type="number" id="hba1c" step="0.1" class="w-full p-2 border-b-2"></div></div></div>
+                    <div class="border-t pt-4"><h3 class="font-semibold mb-2 text-orange-700">肝機能</h3><div class="space-y-3"><div><label for="ast" class="text-sm">AST (GOT) (U/L)</label><input type="number" id="ast" class="w-full p-2 border-b-2"></div><div><label for="alt" class="text-sm">ALT (GPT) (U/L)</label><input type="number" id="alt" class="w-full p-2 border-b-2"></div><div><label for="ggtp" class="text-sm">γ-GTP (U/L)</label><input type="number" id="ggtp" class="w-full p-2 border-b-2"></div></div></div>
+                    <div class="border-t pt-4"><h3 class="font-semibold mb-2 text-purple-700">その他</h3><div class="space-y-3"><div><label for="ua" class="text-sm">尿酸値 (mg/dL)</label><input type="number" id="ua" step="0.1" class="w-full p-2 border-b-2"></div><div><label for="hb" class="text-sm">ヘモグロビン (g/dL)</label><input type="number" id="hb" step="0.1" class="w-full p-2 border-b-2"></div></div></div>
+                </div>
+                <div class="flex justify-between mt-6"><button onclick="prevStep(2)" class="bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">戻る</button><button onclick="generatePlan()" class="bg-green-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-600 shadow-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>健康プランを作成</button></div>
+            </div>
+        </main>
+
+        <!-- 結果表示エリア -->
+        <div id="result-area" class="hidden mt-10">
+            <div id="loading" class="hidden text-center"><svg class="animate-spin h-10 w-10 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="mt-4 text-gray-600">あなたの健康プランを分析・作成中です...</p></div>
+            <div id="result-content" class="hidden space-y-8">
+                <div class="text-center"><h2 class="text-3xl font-bold text-gray-800">あなたのための健康プラン</h2><p class="text-gray-500 mt-2">分析結果に基づき、最適な食事と運動をご提案します。</p></div>
+                <div class="bg-white p-6 rounded-xl shadow-lg result-card"><h3 class="text-xl font-bold text-blue-600 flex items-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>健康状態のサマリー</h3><div id="summary-bmi" class="mb-3"></div><div id="summary-advice" class="text-gray-700 space-y-2"></div></div>
+                <div class="bg-white p-6 rounded-xl shadow-lg result-card"><h3 class="text-xl font-bold text-green-600 flex items-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>食事プラン</h3><div id="diet-plan" class="space-y-4"></div></div>
+                <div class="bg-white p-6 rounded-xl shadow-lg result-card"><h3 class="text-xl font-bold text-orange-600 flex items-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 14l9-5-9-5-9 5 9 5z" /><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-9.998 12.078 12.078 0 01.665-6.479L12 14z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-9.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>運動プラン</h3><div id="exercise-plan" class="text-gray-700 space-y-2"></div></div>
+                <div class="bg-white p-6 rounded-xl shadow-lg result-card"><h3 class="text-xl font-bold text-indigo-600 flex items-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>効果が見えるまでの期間（目安）</h3><div id="timeline-analysis" class="text-gray-700 space-y-3"></div></div>
+                <div class="text-center mt-8"><button onclick="resetApp()" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600">もう一度試す</button></div>
+                <div class="text-xs text-gray-500 text-center mt-6 p-4 border-t"><p><strong>【免責事項】</strong>本アプリが提供する情報は、健康管理をサポートするためのものであり、医師による診断や治療に代わるものではありません。健康に関するご懸念がある場合は、必ず専門の医療機関にご相談ください。</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="recipe-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="closeRecipeModal()">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="p-6 relative">
+                <button onclick="closeRecipeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+                <h3 id="modal-title-recipe" class="text-2xl font-bold text-gray-800 mb-2 pr-8"></h3>
+                <div id="modal-cost" class="text-lg font-semibold text-gray-700 mb-4"></div>
+                <h4 class="text-lg font-semibold mb-2 text-gray-700 border-b pb-2">作り方・ポイント</h4>
+                <div id="modal-recipe" class="text-gray-700 space-y-2 prose"></div>
+            </div>
+        </div>
+    </div>
+    <div id="exercise-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="closeExerciseModal()">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="p-6 relative">
+                <button onclick="closeExerciseModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+                <h3 id="modal-title-exercise" class="text-2xl font-bold text-gray-800 mb-4 pr-8"></h3>
+                <div id="modal-exercise-details" class="text-gray-700 space-y-2 prose"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- グローバル変数 ---
+        let currentStep = 1;
+        let currentDietPlan = null;
+        let currentExercisePlan = null;
+        let userDataForDiet, dietFocusForDiet;
+
+        // --- 画面遷移ロジック ---
+        function nextStep(step) {
+            document.getElementById(`step-${currentStep}`).classList.add('hidden');
+            document.getElementById(`step-${step}`).classList.remove('hidden');
+            document.getElementById(`step-indicator-${currentStep}`).classList.remove('active');
+            document.getElementById(`step-indicator-${currentStep}`).classList.add('completed');
+            document.getElementById(`step-indicator-${step}`).classList.add('active');
+            currentStep = step;
+            window.scrollTo(0, 0);
+        }
+        function prevStep(step) {
+            document.getElementById(`step-${currentStep}`).classList.add('hidden');
+            document.getElementById(`step-${step}`).classList.remove('hidden');
+            document.getElementById(`step-indicator-${currentStep}`).classList.remove('active');
+            document.getElementById(`step-indicator-${step}`).classList.remove('completed');
+            document.getElementById(`step-indicator-${step}`).classList.add('active');
+            currentStep = step;
+            window.scrollTo(0, 0);
+        }
+        function resetApp() { location.reload(); }
+
+        // --- メイン処理 ---
+        function generatePlan() {
+            const checkedAllergies = Array.from(document.querySelectorAll('input[name="allergy"]:checked')).map(el => el.value);
+            const otherAllergiesText = document.getElementById('other_allergies').value;
+            const otherAllergies = otherAllergiesText ? otherAllergiesText.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : [];
+            const allAllergies = [...new Set([...checkedAllergies, ...otherAllergies])];
+
+            const userData = {
+                age: parseFloat(document.getElementById('age').value) || null,
+                gender: document.getElementById('gender').value,
+                height: parseFloat(document.getElementById('height').value) || null,
+                weight: parseFloat(document.getElementById('weight').value) || null,
+                history: Array.from(document.querySelectorAll('input[name="history"]:checked')).map(el => el.value),
+                allergies: allAllergies,
+                exercise: document.getElementById('exercise').value,
+                maxCost: parseFloat(document.getElementById('maxCost').value) || 9999,
+                blood: { ldl: parseFloat(document.getElementById('ldl').value) || null, hdl: parseFloat(document.getElementById('hdl').value) || null, tg: parseFloat(document.getElementById('tg').value) || null, glucose: parseFloat(document.getElementById('glucose').value) || null, hba1c: parseFloat(document.getElementById('hba1c').value) || null, ast: parseFloat(document.getElementById('ast').value) || null, alt: parseFloat(document.getElementById('alt').value) || null, ggtp: parseFloat(document.getElementById('ggtp').value) || null, ua: parseFloat(document.getElementById('ua').value) || null, hb: parseFloat(document.getElementById('hb').value) || null, }
+            };
+
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('step-indicators').classList.add('hidden');
+            document.getElementById('result-area').classList.remove('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            window.scrollTo(0, 0);
+            setTimeout(() => {
+                const analysisResult = analyzeData(userData);
+                displayResults(analysisResult);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('result-content').classList.remove('hidden');
+            }, 2000);
+        }
+
+        // --- データ分析ロジック ---
+        function analyzeData(data) {
+            let advice = [], dietFocus = [], exerciseFocus = [], bmi = null, bmiCategory = '';
+            if (data.height && data.weight) {
+                const heightM = data.height / 100;
+                bmi = (data.weight / (heightM * heightM)).toFixed(1);
+                if (bmi < 18.5) { bmiCategory = '痩せぎみ'; advice.push('適度な体重増加を目指し、バランスの良い食事を心がけましょう。'); }
+                else if (bmi < 25) { bmiCategory = '標準体重'; advice.push('現在の体重を維持し、健康的な生活習慣を続けましょう。'); }
+                else if (bmi < 30) { bmiCategory = '肥満（1度）'; advice.push('体重管理が必要です。食事の見直しと運動習慣を取り入れましょう。'); dietFocus.push('calorie_control'); exerciseFocus.push('fat_burn'); }
+                else { bmiCategory = '肥満（2度以上）'; advice.push('計画的な減量が必要です。医師や管理栄養士に相談することも検討しましょう。'); dietFocus.push('calorie_control'); exerciseFocus.push('fat_burn'); }
+            }
+            data.history.forEach(h => {
+                if (h === '高血圧') { advice.push('血圧管理のため、減塩を意識した食事が重要です。'); dietFocus.push('low_salt'); }
+                if (h === '糖尿病') { advice.push('血糖コントロールのため、糖質の量と質に注意しましょう。'); dietFocus.push('low_sugar'); }
+                if (h === '脂質異常症') { advice.push('脂質異常の改善のため、食事の脂質バランスを見直しましょう。'); dietFocus.push('lipid_control'); }
+                if (h === '高尿酸血症') { advice.push('尿酸値を下げるため、プリン体の多い食品やアルコールを控えましょう。'); dietFocus.push('low_purine'); }
+            });
+            const b = data.blood;
+            if (b.ldl >= 140) { advice.push('LDLコレステロールが高めです。飽和脂肪酸（肉の脂身など）を控え、食物繊維を多く摂りましょう。'); dietFocus.push('lipid_control'); }
+            if (b.hdl < 40) { advice.push('HDLコレステロールが低めです。適度な運動で増やすことができます。'); exerciseFocus.push('aerobic'); }
+            if (b.tg >= 150) { advice.push('中性脂肪が高めです。糖質やアルコールの過剰摂取が原因のことが多いです。'); dietFocus.push('low_sugar'); }
+            if ((b.glucose && b.glucose >= 110) || (b.hba1c && b.hba1c >= 6.0)) { advice.push('血糖値またはHbA1cが高めです。糖質の摂り方を見直し、食後の軽い運動も効果的です。'); dietFocus.push('low_sugar'); exerciseFocus.push('aerobic');}
+            if (b.ast > 30 || b.alt > 30 || b.ggtp > 50) { advice.push('肝機能の数値に注意が必要です。アルコールの摂取を控えるなど、肝臓を休ませましょう。'); dietFocus.push('liver_care');}
+            if (b.ua > 7.0) { advice.push('尿酸値が高めです。水分をしっかり摂り、プリン体を多く含む食品（レバー、魚卵など）を控えましょう。'); dietFocus.push('low_purine');}
+            if ((data.gender === 'male' && b.hb < 13.0) || (data.gender === 'female' && b.hb < 12.0)) { advice.push('ヘモグロビンが低く、貧血の可能性があります。鉄分やタンパク質、ビタミンCを意識して摂りましょう。'); dietFocus.push('anemia_care');}
+            
+            dietFocus = [...new Set(dietFocus)];
+            exerciseFocus = [...new Set(exerciseFocus)];
+            if (advice.length === 0) advice.push('入力された範囲では特に目立った問題は見られませんでした。現在の健康的な生活を続けましょう。');
+            userDataForDiet = data;
+            dietFocusForDiet = dietFocus;
+            return { bmi, bmiCategory, advice, dietPlan: generateDietPlan(data, dietFocus, 3), exercisePlan: generateExercisePlan(data, exerciseFocus), timeline: generateTimelineAnalysis(dietFocus, exerciseFocus) };
+        }
+        
+        // --- 食事・運動プラン生成ロジック ---
+        function generateDietPlan(data, focus, daysToGenerate, existingPlans = []) {
+            let baseCalories = data.gender === 'male' ? 2000 : 1600;
+            if (focus.includes('calorie_control')) baseCalories -= 300;
+            
+            const mealDB = {
+                breakfast: [ 
+                    { name: '和定食 (ご飯、味噌汁、焼き魚、おひたし)', cal: 450, cost: 400, tags: ['default', 'low_salt', 'lipid_control'], allergens: [], ingredients: ['魚', '大豆', '米'], recipe: `<p><strong>主菜：焼き魚</strong></p><ol><li>魚（アジ、サバ、鮭など）に軽く塩を振り、10分ほど置きます。</li><li>出てきた水分をキッチンペーパーで拭き取ります。</li><li>魚焼きグリルを予熱し、皮目を上にして中火で6〜8分、焼き色がつくまで焼きます。</li><li>裏返してさらに3〜5分焼きます。大根おろしを添えるとより美味しくなります。</li></ol><p class="mt-2"><strong>副菜：ほうれん草のおひたし</strong></p><ol><li>ほうれん草をよく洗い、沸騰したお湯で1分〜1分半茹でます。</li><li>冷水にとって冷まし、水気をしっかり絞ります。</li><li>食べやすい大きさに切り、だし醤油をかけて、かつお節を乗せます。</li></ol>` }, 
+                    { name: 'オートミール (フルーツとナッツ入り)', cal: 350, cost: 250, tags: ['default', 'lipid_control', 'low_sugar'], allergens: ['milk'], ingredients: ['オートミール', '牛乳', 'ナッツ'], recipe: `<p><strong>材料：</strong>オートミール 30g、水または牛乳 150ml、お好みのフルーツ（ベリー類、バナナなど）、ナッツ類</p><ol><li>鍋にオートミールと水（または牛乳）を入れ、中火にかけます。</li><li>焦げ付かないように混ぜながら、2〜3分加熱します。</li><li>器に盛り、カットしたフルーツとナッツをトッピングします。</li><li>お好みでシナモンやハチミツを少量加えても良いでしょう。</li></ol>` },
+                    { name: '全粒粉パンのサンドイッチ', cal: 400, cost: 380, tags: ['default', 'calorie_control'], allergens: ['wheat', 'egg'], ingredients: ['パン', '鶏肉', '卵'], recipe: `<p><strong>材料：</strong>全粒粉パン 2枚、鶏むね肉（蒸したもの） 50g、レタス、トマト、きゅうり</p><ol><li>鶏むね肉は薄切りにします。トマト、きゅうりもスライスします。</li><li>パンにマスタードを薄く塗り、レタス、鶏むね肉、トマト、きゅうりの順に重ねます。</li><li>もう1枚のパンで挟み、半分にカットします。</li><li>マヨネーズの代わりに、水切りヨーグルトを使うとさらにヘルシーになります。</li></ol>` },
+                    { name: '納豆もち麦ごはんセット', cal: 400, cost: 150, tags: ['low_sugar', 'lipid_control', 'anemia_care'], allergens: ['wheat'], ingredients: ['納豆', '大豆', '米', '麦'], recipe: `<p><strong>ポイント：</strong>食物繊維が豊富なもち麦をご飯に混ぜることで、血糖値の急上昇を穏やかにします。</p><ol><li>炊飯時に、お米1合に対してもち麦50gと追加の水100mlを加えます。</li><li>納豆には付属のタレの量を半分にし、代わりに少しの醤油やポン酢を加えると減塩になります。</li><li>刻みネギやゴマ、卵黄などを加えると栄養価がアップします。</li></ol>` }
+                ],
+                lunch: [ 
+                    { name: '鶏胸肉のグリル定食 (玄米)', cal: 600, cost: 550, tags: ['default', 'calorie_control', 'anemia_care'], allergens: [], ingredients: ['鶏肉', '米'], recipe: `<p><strong>主菜：鶏胸肉のハーブグリル</strong></p><ol><li>鶏胸肉は厚さを均等にし、フォークで数カ所刺します。</li><li>塩、胡椒、お好みのハーブ（ローズマリー、タイムなど）、オリーブオイル少量で下味をつけます。</li><li>フライパンやグリルで、中火で片面5分ずつ、中に火が通るまで焼きます。</li></ol><p class="mt-2"><strong>ポイント：</strong>主食を玄米にすることで、ビタミン・ミネラル・食物繊維が豊富に摂れます。温野菜やサラダをたっぷり添えましょう。</p>` },
+                    { name: 'コンビニ健康セット', cal: 450, cost: 500, tags: ['calorie_control', 'low_sugar'], allergens: ['wheat', 'egg', 'milk'], ingredients: ['鶏肉', '米', 'パン', '卵', '乳'], recipe: `<p><strong>組み合わせのポイント：</strong></p><ol><li><strong>主食：</strong>「もち麦入りおにぎり」や「ブランパン（ふすまパン）」を選び、糖質の吸収を穏やかにします。</li><li><strong>主菜：</strong>高タンパク・低脂質な「サラダチキン」や「焼き魚」、「ゆで卵」を選びます。</li><li><strong>副菜：</strong>「野菜スティック」、「海藻サラダ」、「具沢山の味噌汁・スープ」を追加して、ビタミン・ミネラル・食物繊維をしっかり補給しましょう。</li></ol>` },
+                    { name: '豆腐ハンバーグ定食', cal: 580, cost: 450, tags: ['liver_care', 'low_purine'], allergens: ['egg', 'wheat'], ingredients: ['豆腐', '鶏肉', '卵', 'パン'], recipe: `<p><strong>材料：</strong>鶏ひき肉 100g、木綿豆腐 150g、玉ねぎ 1/4個、パン粉 大さじ2</p><ol><li>豆腐はキッチンペーパーで包み、レンジで2分加熱して水切りします。玉ねぎはみじん切りにします。</li><li>ボウルにひき肉、豆腐、玉ねぎ、パン粉、塩胡椒を入れてよく混ぜます。</li><li>小判型に成形し、フライパンで両面に焼き色がつくまで焼きます。</li><li>蓋をして弱火で5分蒸し焼きにします。大根おろしとポン酢でさっぱりと頂くのがおすすめです。</li></ol>` }
+                ],
+                dinner: [ 
+                    { name: '豚しゃぶサラダ', cal: 500, cost: 480, tags: ['default', 'low_sugar', 'calorie_control'], allergens: [], ingredients: ['豚肉', '豆腐'], recipe: `<p><strong>材料：</strong>豚肉（しゃぶしゃぶ用） 100g、レタス、きゅうり、トマト、豆腐など</p><ol><li>鍋にお湯を沸かし、豚肉を1枚ずつさっと茹でて色が変わったら冷水に取ります。</li><li>野菜は食べやすい大きさに切り、豆腐は水切りしておきます。</li><li>お皿に野菜と豆腐を盛り付け、上に豚肉を乗せます。</li><li>ドレッシングはポン酢やゴマだれが良いですが、かけすぎに注意しましょう。</li></ol>` },
+                    { name: 'サバの塩焼きと具沢山味噌汁', cal: 550, cost: 420, tags: ['default', 'lipid_control', 'anemia_care'], allergens: [], ingredients: ['さば', '魚', '豆腐', '大豆'], recipe: `<p><strong>ポイント：</strong>サバには良質な脂質であるEPA・DHAが豊富に含まれています。</p><p><strong>主菜：サバの塩焼き</strong></p><ol><li>サバに塩を振り10分置き、出てきた水分を拭き取ります。</li><li>グリルで皮目からこんがりと焼きます。</li></ol><p class="mt-2"><strong>汁物：具沢山味噌汁</strong></p><ol><li>出汁に、大根、人参、きのこ、油揚げ、豆腐、わかめなど、3種類以上の具材を入れます。</li><li>具材が柔らかくなったら火を止め、味噌を溶き入れます。</li></ol>` },
+                    { name: '野菜と豆腐中心の鍋', cal: 450, cost: 500, tags: ['default', 'low_salt', 'liver_care', 'low_purine'], allergens: ['wheat'], ingredients: ['豆腐', '鶏肉', '魚'], recipe: `<p><strong>材料：</strong>白菜、長ネギ、きのこ類、豆腐、鶏肉またはタラなど</p><ol><li>土鍋に昆布と水を入れ、火にかけて沸騰直前に昆布を取り出します。</li><li>食べやすく切った野菜、豆腐、肉や魚を入れ、火が通るまで煮ます。</li><li>ポン酢に大根おろしやネギなどの薬味をたっぷり入れて頂きます。</li><li>〆の雑炊やうどんは糖質が高いため、食べるなら少量にしましょう。</li></ol>` }
+                ]
+            };
+
+            const selectMeal = (mealType, usedMeals) => {
+                let availableMeals = mealDB[mealType]
+                    .filter(meal => meal.cost <= data.maxCost)
+                    .filter(meal => !data.allergies.some(allergen => 
+                        meal.allergens.includes(allergen) || meal.ingredients.some(ing => allergen.includes(ing) || ing.includes(allergen))
+                    ));
+
+                let options = availableMeals.filter(m => m.tags.some(t => focus.includes(t)) && !usedMeals.includes(m.name));
+                if (options.length === 0) options = availableMeals.filter(m => m.tags.includes('default') && !usedMeals.includes(m.name));
+                if (options.length === 0) options = availableMeals.filter(m => !usedMeals.includes(m.name));
+                if (options.length === 0) return { name: '条件に合うメニューが見つかりません', cal: 0, cost: 0, recipe: 'アレルギーや費用の上限などの条件を緩めて再度お試しください。', allergens: [], ingredients: [] };
+                return options[Math.floor(Math.random() * options.length)];
+            };
+
+            let dailyPlans = [...existingPlans];
+            for (let i = 0; i < daysToGenerate; i++) {
+                let usedBreakfasts = dailyPlans.map(p => p.breakfast.name);
+                let usedLunches = dailyPlans.map(p => p.lunch.name);
+                let usedDinners = dailyPlans.map(p => p.dinner.name);
+                const breakfast = selectMeal('breakfast', usedBreakfasts);
+                const lunch = selectMeal('lunch', usedLunches);
+                const dinner = selectMeal('dinner', usedDinners);
+                dailyPlans.push({ breakfast, lunch, dinner, totalCal: breakfast.cal + lunch.cal + dinner.cal });
+            }
+            return { baseCalories, dailyPlans };
+        }
+
+        function addMoreDietDays() {
+            const newPlan = generateDietPlan(userDataForDiet, dietFocusForDiet, 3, currentDietPlan.dailyPlans);
+            currentDietPlan = newPlan;
+            updateDaySelectorUI();
+            const buttons = document.querySelectorAll('#diet-day-selector .day-btn');
+            if (buttons.length > 0) {
+                updateDietDisplay(buttons.length - 3);
+            }
+            if (currentDietPlan.dailyPlans.length >= 28) {
+                const addButton = document.getElementById('add-more-days-btn');
+                addButton.textContent = '最大日数に達しました';
+                addButton.disabled = true;
+                addButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                addButton.classList.remove('bg-green-500', 'hover:bg-green-600');
+            }
+        }
+        
+        function generateExercisePlan(data, focus) {
+            const exerciseDB = {
+                start_walking: { title: 'まずは歩くことから', shortDescription: '日常生活の中で歩く時間を10分増やしましょう。', details: `<h4>ポイントとコツ</h4><ul><li><strong>意識的に機会を作る:</strong> エレベーターを階段に変える、一駅手前で降りて歩くなど、小さな工夫を積み重ねましょう。</li><li><strong>正しいフォームで:</strong> 背筋を伸ばし、かかとから着地して、腕を軽く振ると、運動効果がアップします。</li><li><strong>無理なく続ける:</strong> 最初は短い時間からでOK。まずは「歩く」ことを習慣にすることが最も重要です。</li></ul>` },
+                step_up_walking: { title: 'ウォーキングに挑戦', shortDescription: '週に2〜3日、30分程度の早歩きを取り入れてみましょう。', details: `<h4>ポイントとコツ</h4><ul><li><strong>強度:</strong> 少し汗ばむ程度で、会話が楽しめるくらいのペースが理想です。</li><li><strong>時間帯:</strong> 食後の血糖値が上がりやすい時間帯（食後30分〜1時間）に行うと、血糖コントロールに特に効果的です。</li><li><strong>準備運動:</strong> 始める前に足首を回したり、軽くストレッチをしたりして、怪我を予防しましょう。</li></ul>` },
+                keep_habit: { title: '習慣の維持と強化', shortDescription: '現在の運動習慣を続け、筋力トレーニングを加えてみましょう。', details: `<h4>ポイントとコツ</h4><ul><li><strong>マンネリ防止:</strong> いつもと違うコースを歩いたり、少しペースを上げてみたりと、変化を加えると楽しく続けられます。</li><li><strong>筋トレの追加:</strong> 有酸素運動に加えて、週1〜2回の筋トレを行うと、基礎代謝が上がり、より痩せやすい体になります。下記「自宅で筋トレ」も参考にしてください。</li></ul>` },
+                advanced: { title: '素晴らしい運動習慣', shortDescription: '怪我に注意し、休息もトレーニングの一環と考えましょう。', details: `<h4>ポイントとコツ</h4><ul><li><strong>オーバートレーニングに注意:</strong> 疲れが抜けない、パフォーマンスが落ちるなどのサインがあれば、勇気を持って休みましょう。</li><li><strong>栄養補給:</strong> 運動後はタンパク質や炭水化物を適切に補給し、筋肉の回復を助けましょう。</li><li><strong>多様性:</strong> 異なる種類の運動を組み合わせる（クロストレーニング）ことで、全身をバランスよく鍛え、怪我のリスクを減らせます。</li></ul>` },
+                aerobic: { title: '有酸素運動で脂肪燃焼', shortDescription: '脂肪燃焼や心肺機能向上に効果的です。', details: `<h4>ポイントとコツ</h4><ul><li><strong>強度:</strong> 「少し息が弾むけれど、会話はできる」くらい（最大心拍数の60〜70%）が脂肪燃焼に最も効果的です。</li><li><strong>時間:</strong> 連続して20分以上行うと、脂肪がエネルギーとして使われやすくなります。</li><li><strong>種類:</strong> ウォーキング、ジョギング、サイクリング、水泳など、自分が楽しめるものを選びましょう。</li><li><strong>水分補給:</strong> 運動の前後、そして運動中もこまめに水分を摂ることを忘れずに。</li></ul>` },
+                strength: { title: '自宅で筋トレ', shortDescription: '基礎代謝を上げて、太りにくい体を作りましょう。', details: `<h4>ポイントとコツ</h4><ul><li><strong>大きな筋肉から:</strong> まずは下半身の大きな筋肉を鍛える「スクワット」から始めるのが効率的です。</li><li><strong>正しいフォームで:</strong> 回数よりも、一つ一つの動作を正確に行うことが重要です。鏡を見ながら行うのがおすすめです。</li><li><strong>呼吸を止めない:</strong> 力を入れる時に息を吐き、戻す時に吸うのが基本です。</li><li><strong>頻度:</strong> 週に2〜3回が目安。筋肉を休ませる日（回復期間）も作りましょう。</li></ul>` }
+            };
+
+            let plan = [];
+            switch(data.exercise) {
+                case 'none': plan.push(exerciseDB.start_walking); break;
+                case 'light': plan.push(exerciseDB.step_up_walking); break;
+                case 'moderate': plan.push(exerciseDB.keep_habit); break;
+                case 'heavy': plan.push(exerciseDB.advanced); break;
+            }
+            if (focus.includes('fat_burn') || focus.includes('aerobic') || data.blood.hdl < 40) {
+                plan.push(exerciseDB.aerobic);
+            }
+            plan.push(exerciseDB.strength);
+            return [...new Map(plan.map(item => [item.title, item])).values()]; // 重複削除
+        }
+
+        function generateTimelineAnalysis(dietFocus, exerciseFocus) {
+            let analysis = [];
+            if (dietFocus.includes('calorie_control') || exerciseFocus.includes('fat_burn')) { analysis.push({ title: '体重・体型の変化', description: '実践後1〜2週間でむくみが取れるなど体感的な変化を感じ始め、1ヶ月で1〜2kg程度の健康的なペースでの減少が目安です。' }); }
+            if (dietFocus.includes('low_sugar')) { analysis.push({ title: '血糖値関連の改善', description: '食後の眠気やだるさの軽減は、数日〜1週間で体感できることがあります。HbA1cなど血液検査の数値は、1〜2ヶ月後の検査で変化が期待できます。' }); }
+            if (dietFocus.includes('lipid_control')) { analysis.push({ title: '脂質関連の改善', description: 'コレステロールや中性脂肪の数値は、食生活と運動の改善を継続することで、2〜3ヶ月後の血液検査で変化として現れるのが一般的です。' }); }
+            if (dietFocus.includes('low_salt')) { analysis.push({ title: '血圧の安定', description: '減塩の効果は比較的早く現れ、1〜2週間で血圧の安定が見られることがあります。継続が何よりも重要です。' }); }
+            if (analysis.length === 0) { analysis.push({ title: '健康維持', description: '現在の良好な状態を維持することが目標です。体調の変化を感じるというよりは、将来の健康への投資と捉え、楽しみながら継続しましょう。' }); }
+            analysis.push({ title: '総合的な体調', description: '睡眠の質の向上や、日中の活力アップなど、数値以外のポジティブな変化は、1〜2週間で感じられることが多いです。' });
+            return analysis;
+        }
+
+        // --- 結果表示ロジック ---
+        function displayResults(result) {
+            const bmiEl = document.getElementById('summary-bmi');
+            if (result.bmi) { bmiEl.innerHTML = `<p class="text-lg">あなたのBMIは <strong class="text-2xl text-blue-600">${result.bmi}</strong> で、<strong class="text-2xl text-blue-600">${result.bmiCategory}</strong> です。</p>`; }
+            else { bmiEl.innerHTML = `<p class="text-lg">身長・体重が未入力のためBMIは計算できませんでした。</p>`; }
+            const adviceEl = document.getElementById('summary-advice');
+            adviceEl.innerHTML = result.advice.map(a => `<p class="flex"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>${a}</span></p>`).join('');
+            
+            currentDietPlan = result.dietPlan;
+            const dietEl = document.getElementById('diet-plan');
+            dietEl.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg text-center"><p class="font-semibold">1日の目標摂取カロリー目安: <span class="text-2xl text-green-600 font-bold">${currentDietPlan.baseCalories} kcal</span></p></div>
+                <div id="diet-day-selector" class="flex flex-wrap justify-center gap-2 mb-4"></div>
+                <div id="daily-diet-content" class="min-h-[200px]"></div>
+                <div class="text-center mt-4"><button id="add-more-days-btn" onclick="addMoreDietDays()" class="bg-green-500 text-white font-semibold py-2 px-5 rounded-lg hover:bg-green-600">次の3日間のプランを見る</button></div>
+                <div class="mt-4 text-sm text-gray-600 p-3 bg-green-50 rounded-lg"><h4 class="font-semibold mb-1">食事のポイント</h4><p>これはあくまで一例です。野菜やきのこ、海藻類を積極的に取り入れ、バランスの良い食事を心がけましょう。よく噛んで食べることも大切です。</p></div>
+            `;
+            updateDaySelectorUI();
+            updateDietDisplay(0);
+
+            currentExercisePlan = result.exercisePlan;
+            const exerciseEl = document.getElementById('exercise-plan');
+            exerciseEl.innerHTML = currentExercisePlan.map((p, index) => `
+                <div onclick="showExerciseModal(${index})" class="exercise-card p-3 border-l-4 border-orange-400 bg-orange-50">
+                    <h4 class="font-semibold text-orange-800">${p.title}</h4>
+                    <p>${p.shortDescription}</p>
+                </div>
+            `).join('');
+
+            const timelineEl = document.getElementById('timeline-analysis');
+            timelineEl.innerHTML = result.timeline.map(t => `<div class="p-3 border-l-4 border-indigo-400 bg-indigo-50"><h4 class="font-semibold text-indigo-800">${t.title}</h4><p>${t.description}</p></div>`).join('');
+        }
+
+        function updateDaySelectorUI() {
+            const selectorEl = document.getElementById('diet-day-selector');
+            selectorEl.innerHTML = '';
+            currentDietPlan.dailyPlans.forEach((plan, index) => {
+                const button = document.createElement('button');
+                button.textContent = `${index + 1}日目`;
+                button.className = 'day-btn bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-md text-sm';
+                button.onclick = () => updateDietDisplay(index);
+                selectorEl.appendChild(button);
+            });
+        }
+
+        function updateDietDisplay(dayIndex) {
+            const dailyContentEl = document.getElementById('daily-diet-content');
+            const dayPlan = currentDietPlan.dailyPlans[dayIndex];
+            dailyContentEl.innerHTML = `
+                <p class="text-center text-sm text-gray-600 mb-3">提案メニュー合計: 約 ${dayPlan.totalCal} kcal（各メニューをクリックで詳細表示）</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div onclick="showRecipeModal(${dayIndex}, 'breakfast')" class="meal-card bg-gray-100 p-4 rounded-lg"><h4 class="font-bold">朝食</h4><p>${dayPlan.breakfast.name}</p><p class="text-sm text-gray-500">約 ${dayPlan.breakfast.cal} kcal</p></div>
+                    <div onclick="showRecipeModal(${dayIndex}, 'lunch')" class="meal-card bg-gray-100 p-4 rounded-lg"><h4 class="font-bold">昼食</h4><p>${dayPlan.lunch.name}</p><p class="text-sm text-gray-500">約 ${dayPlan.lunch.cal} kcal</p></div>
+                    <div onclick="showRecipeModal(${dayIndex}, 'dinner')" class="meal-card bg-gray-100 p-4 rounded-lg"><h4 class="font-bold">夕食</h4><p>${dayPlan.dinner.name}</p><p class="text-sm text-gray-500">約 ${dayPlan.dinner.cal} kcal</p></div>
+                </div>
+            `;
+            const buttons = document.querySelectorAll('#diet-day-selector .day-btn');
+            buttons.forEach((btn, index) => {
+                const isActive = (index === dayIndex);
+                btn.classList.toggle('active', isActive);
+                btn.classList.toggle('bg-blue-500', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('bg-gray-200', !isActive);
+                btn.classList.toggle('text-gray-700', !isActive);
+            });
+        }
+
+        // --- モーダル制御 ---
+        function showRecipeModal(dayIndex, mealType) {
+            const meal = currentDietPlan.dailyPlans[dayIndex][mealType];
+            document.getElementById('modal-title-recipe').textContent = meal.name;
+            document.getElementById('modal-cost').innerHTML = `<span class="font-bold text-green-600">費用の目安:</span> 約${meal.cost}円`;
+            document.getElementById('modal-recipe').innerHTML = meal.recipe;
+            document.getElementById('recipe-modal').classList.remove('hidden');
+        }
+        function closeRecipeModal() {
+            document.getElementById('recipe-modal').classList.add('hidden');
+        }
+        function showExerciseModal(index) {
+            const exercise = currentExercisePlan[index];
+            document.getElementById('modal-title-exercise').textContent = exercise.title;
+            document.getElementById('modal-exercise-details').innerHTML = exercise.details;
+            document.getElementById('exercise-modal').classList.remove('hidden');
+        }
+        function closeExerciseModal() {
+            document.getElementById('exercise-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
